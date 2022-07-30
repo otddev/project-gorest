@@ -14,11 +14,11 @@ func CheckID(i string, db map[string]map[string]interface{}) error {
 
 	_, err := uuid.Parse(i)
 	if err != nil {
-		err.Error()
+		return err
 	}
 
 	if _, ok := db[i]; ok {
-		errors.New("the id provided does not exist in database")
+		return errors.New("the id provided does not exist in database")
 	}
 
 	return nil
