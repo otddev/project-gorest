@@ -1,61 +1,41 @@
 package main
 
 import (
-	"github.com/angarcia/gorest/controllers"
-	"github.com/angarcia/gorest/docs"
+	"github.com/angarcia/gorest/handlers"
+	"github.com/angarcia/gorest/mw"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 )
 
-func init() {
-	// Initialize Swagger Documentation
-	////////////////////////////////////////////////////////
-	docs.SwaggerInfo.Title = "GOLang RestFul API Example"
-	docs.SwaggerInfo.Description = "This is the API documentation for GOLang RestFul API Example Project"
-	docs.SwaggerInfo.Version = "1.0"
-	docs.SwaggerInfo.BasePath = "/api"
-	docs.SwaggerInfo.Schemes = []string{"http"}
-	////////////////////////////////////////////////////////
-}
-
 func main() {
 
-	var port string = ":8080"
-
-	db := make(map[string]map[string]interface{})
+	// Port Configuration & HTTP Logger Initiate
+	var port string = ":8181"
 	router := mux.NewRouter().StrictSlash(true)
+	router.Use(mw.HTTPLogger)
+
+	// Create handler which will also initialize empty map for storage.
+	rh := handlers.CreateHandler(make(map[string]map[string]interface{}))
+
+	// API Route Definitions
 	api := router.PathPrefix("/api/").Subrouter()
+	api.HandleFunc("/resources/{id}", rh.GetResourceHandler).Methods(http.MethodGet)
+	api.HandleFunc("/resources", rh.GetResourcesHandler).Methods(http.MethodGet)
+	api.HandleFunc("/resources", rh.CreateResourceHandler).Methods(http.MethodPost)
+	api.HandleFunc("/resources/{id}", rh.UpdateResourceHandler).Methods(http.MethodPut)
+	api.HandleFunc("/resources/{id}", rh.DeleteResourceHandler).Methods(http.MethodDelete)
 
-	api.HandleFunc("/resources/{id}", func(w http.ResponseWriter, r *http.Request) {
-		controllers.FindResource(w, r, db)
-	}).Methods("GET")
-
-	api.HandleFunc("/resources", func(w http.ResponseWriter, r *http.Request) {
-		controllers.FindResources(w, r, db)
-	}).Methods("GET")
-
-	api.HandleFunc("/resources", func(w http.ResponseWriter, r *http.Request) {
-		controllers.CreateResource(w, r, db)
-	}).Methods("POST")
-
-	api.HandleFunc("/resources/{id}", func(w http.ResponseWriter, r *http.Request) {
-		controllers.UpdateResource(w, r, db)
-	}).Methods("PUT")
-
-	api.HandleFunc("/resources/{id}", func(w http.ResponseWriter, r *http.Request) {
-		controllers.DeleteResource(w, r, db)
-	}).Methods("DELETE")
-
+	// Page Not Found Route Definition
 	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error: The page request was not found.")
 		http.Error(w, "PAGE NOT FOUND", http.StatusNotFound)
 	})
 
+	// Server Start
 	log.Printf("Starting Server: '%s'", port)
 	err := http.ListenAndServe(port, router)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 }
